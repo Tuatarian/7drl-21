@@ -1,4 +1,4 @@
-import raylib, math, hashes, sugar, macros, strutils
+import raylib, math, hashes, sugar, macros, strutils, lenientops
 
 func makevec2*(x, y: float | float32 | int) : Vector2 =  ## Easy vec2 constructor
     result.x = float x
@@ -26,8 +26,8 @@ func `+`*[T](v : Vector2, n : T) : Vector2 =
     result.y = v.y + n
 
 func `-`*[T](v : Vector2, n : T) : Vector2 =
-    result.x = v.x - n
-    result.y = v.y - n
+    result.x = v.x - n.float
+    result.y = v.y - n.float
 
 func `+=`*[T](v : var Vector2, t : T) = 
     v = v + t
@@ -180,7 +180,7 @@ proc drawTexCentered*(tex : Texture, pos : Vector2, tint : Color) = ## Draws Tex
     tex.DrawTexture(int pos.x + tex.width / 2, int pos.y + tex.height / 2, tint)
 
 proc drawTexCentered*(tex : Texture, posx, posy : int | float | float32, tint : Color) = ## Draws texture from center
-    tex.DrawTexture(int posx + tex.width / 2, int posy + tex.height / 2, tint)
+    tex.DrawTexture(int posx + tex.width div 2, int posy + tex.height div 2, tint)
 
 func reflect*(i, tp : int | float) : int | float = ## Flips value over tp
     return tp - i + tp
