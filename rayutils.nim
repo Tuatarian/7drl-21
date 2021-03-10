@@ -1,5 +1,14 @@
 import raylib, math, hashes, sugar, macros, strutils, lenientops
 
+template BGREY*() : auto = makecolor("282828", 255)
+template OFFWHITE*() : auto = makecolor(235, 235, 235)
+
+func makecolor*(f, d, l : int | float | uint8, o : uint8 = 255) : Color = ## Easy color constructor
+    return Color(r : uint8 f, g : uint8 d, b : uint8 l, a : uint8 o)
+
+func makecolor*(s : string, alp : uint8 = 255) : Color =
+    return makecolor(fromHex[uint8]($s[0..1]), fromHex[uint8]($s[2..3]), fromHex[uint8]($s[4..5]), alp)
+
 func makevec2*(x, y: float | float32 | int) : Vector2 =  ## Easy vec2 constructor
     result.x = float x
     result.y = float y
@@ -11,7 +20,7 @@ macro iterIt*[T](s : openArray[T], op : untyped) : untyped = ## applies operatio
     result = newStmtList()
     result.add(newTree(nnkForStmt, newIdentNode("it"), newIdentNode($s), newStmtList(op)))
 
-const colorArr* : array[25, Color] = [LIGHTGRAY, GRAY, DARKGRAY, YELLOW, GOLD, ORANGE, PINK, RED, MAROON, GREEN, LIME, DARKGREEN, SKYBLUE, BLUE, DARKBLUE, PURPLE, VIOLET, DARKPURPLE, BEIGE, BROWN, DARKBROWN, WHITE, BLACK, MAGENTA, RAYWHITE] ## Array of all rl colours
+const colorArr* : array[27, Color] = [LIGHTGRAY, GRAY, DARKGRAY, YELLOW, GOLD, ORANGE, PINK, RED, MAROON, GREEN, LIME, DARKGREEN, SKYBLUE, BLUE, DARKBLUE, PURPLE, VIOLET, DARKPURPLE, BEIGE, BROWN, DARKBROWN, WHITE, BLACK, MAGENTA, RAYWHITE, BGREY, OFFWHITE] ## Array of all rl colours
 
 func `+`*(v, v2 : Vector2) : Vector2 =
     result.x = v.x + v2.x
@@ -106,13 +115,6 @@ func `in`*(v, t1, t2, t3 : Vector2) : bool =
     let d2 = sign(v, t2, t3)
     let d3 = sign(v, t3, t1)
     return not ((d < 0) or (d2 < 0) or (d3 < 0)) and ((d > 0) or (d2 > 0) or (d3 > 0))
-    
-
-func makecolor*(f, d, l : int | float | uint8, o : uint8 = 255) : Color = ## Easy color constructor
-    return Color(r : uint8 f, g : uint8 d, b : uint8 l, a : uint8 o)
-
-func makecolor*(s : string, alp : uint8 = 255) : Color =
-    return makecolor(fromHex[uint8]($s[0..1]), fromHex[uint8]($s[2..3]), fromHex[uint8]($s[4..5]), alp)
 
 proc UnloadTexture*(texargs : varargs[Texture]) = ## runs UnloadTexture for each vararg
     texargs.iterIt(UnloadTexture it)
@@ -266,3 +268,15 @@ proc drawTriangleFan*(verts : varargs[Vector2], color : Color) = ## Probably ine
 
 func normalize*(v : Vector2) : Vector2 = ## Normalize Vector
     return v / sqrt(v.x ^ 2 + v.y ^ 2)
+
+func drawTexCenteredFromGrid*(tex : Texture, pos : Vector2, tilesize : int, tint : Color) =
+    DrawTexture(tex, int32 pos.x * tilesize + (tilesize - tex.width) / 2, int32 pos.y * tilesize + (tilesize - tex.height) / 2, tint)
+
+func drawTexFromGrid*(tex : Texture, pos : Vector2, tilesize : int, tint : Color) =
+    DrawTexture(tex, int pos.x * tilesize, int pos.y * tilesize, tint)
+
+func drawTexCenteredFromGrid*(tex : Texture, posx, posy : int, tilesize : int, tint : Color) =
+    DrawTexture(tex, int32 posx * tilesize + (tilesize - tex.width) / 2, int32 posy * tilesize + (tilesize - tex.height) / 2, tint)
+
+func drawTexFromGrid*(tex : Texture, posx, posy : int, tilesize : int, tint : Color) =
+    DrawTexture(tex, int posx * tilesize, int posy * tilesize, tint)
