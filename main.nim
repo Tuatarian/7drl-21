@@ -54,9 +54,10 @@ proc cellAutomaton(iters : int, prevalence : int, map : var seq[seq[(Tile, OTile
                 elif map[j, i][1] == EN1:
                     map[j, i] = (map[j, i][0], NONE)
                     if makevec2(i, j) in result: result.del result.find(makevec2(i, j))
+    if makevec2(0, 0) in result: result.del result.find makevec2(0, 0)
 
 proc genOmap(prevalence : int, mednum : int, map : var seq[seq[(Tile, OTile)]]) : (seq[Vector2], seq[Vector2]) =
-    result[0] = cellAutomaton(10, prevalence, map) 
+    result[0] = cellAutomaton(10, prevalence, map)
     let numMed = int gauss(mednum.float, 1)
     for i in 0..<numMed:
         var spos = makevec2(rand map.len - 1, rand map[0].len - 1)
@@ -120,7 +121,7 @@ var
     map = genSeqSeq(8, 13, (GRND, NONE))
     elocs, medlocs : seq[Vector2]
 
-(elocs, medlocs) = genOmap(50, 4, map)
+(elocs, medlocs) = genOmap(50, 6, map)
 
 while not WindowShouldClose():
     ClearBackground BGREY
@@ -139,7 +140,7 @@ while not WindowShouldClose():
     if medlocs.len > 0 and plr.pos in medlocs:
         map[invert plr.pos] = (map[invert plr.pos][0], NONE)
         medlocs.del medlocs.find(plr.pos)
-        plr.health = plr.fullhealth
+        plr.health += plr.fullhealth
         echo plr.health
 
 
