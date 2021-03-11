@@ -10,8 +10,7 @@ func makecolor*(s : string, alp : uint8 = 255) : Color =
     return makecolor(fromHex[uint8]($s[0..1]), fromHex[uint8]($s[2..3]), fromHex[uint8]($s[4..5]), alp)
 
 func makevec2*(x, y: float | float32 | int) : Vector2 =  ## Easy vec2 constructor
-    result.x = float x
-    result.y = float y
+    Vector2(x : float x, y : float y)
 
 func sigmoid*(x : int | float, a : int | float = 1, b : int | float = E, h : int | float = 0, k : int | float = 0) : float = ## Sigmoid in the form a(1/1 + e^(hx)) + k
     return a * 1/(1 + pow(E, h * x)) + k
@@ -280,3 +279,13 @@ func drawTexCenteredFromGrid*(tex : Texture, posx, posy : int, tilesize : int, t
 
 func drawTexFromGrid*(tex : Texture, posx, posy : int, tilesize : int, tint : Color) =
     DrawTexture(tex, int posx * tilesize, int posy * tilesize, tint)
+
+func getNeighborTiles*[T](map : seq[seq[T]], y, x : int) : seq[T] =
+    if y < map.len - 1:
+        result.add map[y + 1, x]
+    if y > 0:
+        result.add map[y - 1, x]
+    if x < map[0].len - 1:
+        result.add map[y, x + 1]
+    if x > 0:
+        result.add map[y, x - 1]
