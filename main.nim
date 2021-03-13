@@ -1,4 +1,4 @@
-import raylib, rayutils, tables, random, lenientops
+import raylib, rayutils, tables, random, lenientops, strformat
 
 randomize()
 
@@ -8,7 +8,7 @@ type
         npos : Vector2
         health : int
         posSeq : seq[Vector2]
-        dead, won : bool
+        dead, won, canMove : bool
         xp : int
         fullhealth : int
     Tile = enum
@@ -27,7 +27,7 @@ SetTargetFPS 60
 let
     plrTex = LoadTexture "assets/sprites/Player.png"
     tileTexTable = toTable {GRND : LoadTexture "assets/sprites/BaseTile.png", WALL : LoadTexture "assets/sprites/walls/1111.png"}
-    oTileTexTable = toTable {NONE : LoadTexture"assets/sprites/BaseTile.png", EN1 : LoadTexture "assets/sprites/Enemy1.png", MED : LoadTexture "assets/sprites/medkit.png"}
+    oTileTexTable = toTable {NONE : LoadTexture "assets/sprites/BaseTile.png", EN1 : LoadTexture "assets/sprites/Enemy1.png", MED : LoadTexture "assets/sprites/medkit.png"}
 
 
 # ---> Map Management <--- #
@@ -111,15 +111,62 @@ func renderMap(map : seq[seq[(Tile, Otile)]], tileTexTable : Table[Tile, Texture
             drawTexFromGrid tileTexTable[map[i, j][0]], j, i, tilesize, WHITE
             drawTexCenteredFromGrid oTileTexTable[map[i, j][1]], j, i, tilesize, WHITE
 
-func renderTrail(plr : Player, tilesize : int) =
-    for v in plr.posSeq:
-        DrawRectangleV(v * tilesize, makevec2(tilesize, tilesize), WHITE)
+func renderTrail(plr : Player, texTable : Table[string, Texture], tilesize : int) =
+    if plr.posSeq.len > 1:
+        for i in 0..<plr.posSeq.len:
+            var texId = "0000"
+            if i != plr.posSeq.len - 1 and i != 0:
+                let dir = plr.posSeq[i - 1] - plr.posSeq[i]
+                let dir2 = plr.posSeq[i + 1] - plr.posSeq[i]
+                let dirX = [dir.x, dir2.x]
+                let dirY = [dir.y, dir2.y]
+                for i in dirX:
+                    if i == -1:
+                        texId[3] = '1'
+                    elif i == 1:
+                        texId[1] = '1'
+                for i in dirY:
+                    if i == -1:
+                        texId[0] = '1'
+                    elif i == 1:
+                        texID[2] = '1'
+                DrawTextureV(texTable[texId], plr.posSeq[i] * tilesize, WHITE)
+            elif i == 0:
+                let dir = plr.posSeq[i + 1] - plr.posSeq[i]
+                if dir.x == -1:
+                    texId[3] = '1'
+                elif dir.x == 1:
+                    texId[1] = '1'
+                if dir.y == -1:
+                    texId[0] = '1'
+                elif dir.y == 1:
+                    texID[2] = '1'
+                DrawTextureV(texTable[texId], plr.posSeq[i] * tilesize, WHITE)
+            elif i == plr.posSeq.len - 1:
+                let dir = plr.posSeq[i - 1] - plr.posSeq[i]
+                if dir.x == -1:
+                    texId[3] = '1'
+                elif dir.x == 1:
+                    texId[1] = '1'
+                if dir.y == -1:
+                    texId[0] = '1'
+                elif dir.y == 1:
+                    texID[2] = '1'
+                DrawTextureV(texTable[texId], plr.posSeq[i] * tilesize, WHITE)                     
 
 var
     plr = Player(pos : makevec2(0, 0), health : 2, fullhealth : 2)
     lfkey : KeyboardKey
     map = genSeqSeq(8, 13, (GRND, NONE))
     elocs, medlocs : seq[Vector2]
+    trailTexTable = toTable {"0000" : LoadTexture "assets/sprites/trails/0000.png"}
+    winTimer, deathTimer : int
+
+for i in 0..12:
+    var bini = $int2bin i
+    while bini.len != 4:
+        bini = "0" & bini
+    trailTexTable[bini] = LoadTexture &"assets/sprites/trails/{bini}.png"
 
 (elocs, medlocs) = genOmap(50, 6, map)
 
@@ -128,11 +175,14 @@ while not WindowShouldClose():
 
     if plr.npos notin plr.posSeq:
         plr.posSeq.add plr.npos
-    if plr.pos in plr.posSeq[0..^1]:
+
+    if plr.pos in plr.posSeq[0..^2] or plr.health < 0:
         plr.dead = true
+        plr.canMove = false
     
     if elocs.len > 0 and plr.pos in elocs:
         map[invert plr.pos] = (map[invert plr.pos][0], NONE)
+        echo plr.pos
         elocs.del elocs.find(plr.pos)
         plr.health += -1
         echo plr.health
@@ -144,12 +194,40 @@ while not WindowShouldClose():
         echo plr.health
 
 
+    if (not plr.canMove) and plr.dead:
+        if deathTimer == 5:
+            deathTimer = 0
+            plr.dead = false
+            plr.canMove = true
+            plr.posSeq = @[]
+            plr = Player(pos : makevec2(0, 0), health : 2, fullhealth : 2)
+            elocs = @[]
+            medlocs = @[]
+            map = genSeqSeq(8, 13, (GRND, NONE))
+            (elocs, medlocs) = genOmap(50, 6, map)
+        deathTimer += 1
+
+    if plr.won:
+        deathTimer = 0
+        plr.canMove = false
+        if winTimer == 7:
+            plr.won = false
+            plr.canMove = true
+            winTimer = 0
+            plr.posSeq = @[]
+            elocs = @[]
+            medlocs = @[]
+            map = genSeqSeq(8, 13, (GRND, NONE))
+            (elocs, medlocs) = genOmap(50, 6, map)
+        else: winTimer += 1
+
+
     lfkey = movePLr(plr, numTilesVec, lfkey)
     plrAnim plr
 
     BeginDrawing()
     renderMap map, tileTexTable, oTileTexTable, tilesize
-    renderTrail plr, tilesize
+    renderTrail plr, trailTexTable, tilesize
     drawTexCenteredFromGrid plrTex, plr.pos, tilesize, WHITE
     EndDrawing()
 
