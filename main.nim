@@ -1,4 +1,4 @@
-import raylib, rayutils, tables, random, lenientops, strformat
+import raylib, rayutils, tables, random, lenientops, strformat, math
 
 randomize()
 
@@ -10,6 +10,7 @@ type
         posSeq : seq[Vector2]
         dead, won, canMove : bool
         xp : int
+        lvl : int
         fullhealth : int
     Tile = enum
         GRND, WALL
@@ -55,6 +56,7 @@ proc cellAutomaton(iters : int, prevalence : int, map : var seq[seq[(Tile, OTile
                     map[j, i] = (map[j, i][0], NONE)
                     if makevec2(i, j) in result: result.del result.find(makevec2(i, j))
     if makevec2(0, 0) in result: result.del result.find makevec2(0, 0)
+    if makevec2(12, 5) in result: result.del result.find makevec2(12, 5)
 
 proc genOmap(prevalence : int, mednum : int, map : var seq[seq[(Tile, OTile)]]) : (seq[Vector2], seq[Vector2]) =
     result[0] = cellAutomaton(10, prevalence, map)
@@ -155,15 +157,15 @@ func renderTrail(plr : Player, texTable : Table[string, Texture], tilesize : int
                 DrawTextureV(texTable[texId], plr.posSeq[i] * tilesize, WHITE)                     
 
 var
-    plr = Player(pos : makevec2(0, 0), health : 2, fullhealth : 2)
+    plr = Player(npos : makevec2(0, 0), pos : makevec2(0, 0), health : 2, fullhealth : 2, lvl : 4)
     lfkey : KeyboardKey
     map = genSeqSeq(8, 13, (GRND, NONE))
     elocs, medlocs : seq[Vector2]
     trailTexTable = toTable {"0000" : LoadTexture "assets/sprites/trails/0000.png"}
     winTimer, deathTimer : int
     estreak : int
-    lmestreak : int
     plrpcache : seq[Vector2]
+    currentlv : int
 
 for i in 0..12:
     var bini = $int2bin i
@@ -181,8 +183,7 @@ while not WindowShouldClose():
 
     if plr.pos in plr.posSeq[0..^2] or plr.health < 0:
         plr.dead = true
-        plr.canMove = false
-    
+
     if elocs.len > 0 and plr.pos in elocs:
         map[invert plr.pos] = (map[invert plr.pos][0], NONE)
         echo plr.pos
@@ -196,42 +197,60 @@ while not WindowShouldClose():
         map[invert plr.pos] = (map[invert plr.pos][0], NONE)
         medlocs.del medlocs.find(plr.pos)
         plr.health += plr.fullhealth
-        estreak += 1
         plrpcache.add plr.pos
         echo plr.health, " -> ", estreak
 
     if plr.npos notin elocs and plr.npos notin medlocs and plr.pos notin plrpcache:
+        plr.xp += (estreak ^ 2 + estreak) div 2
+        while (plr.lvl) ^ 2 < plr.xp:
+            plr.xp += -(plr.lvl ^ 2)
+            plr.lvl += 2
         estreak = 0
 
-    if (not plr.canMove) and plr.dead:
+    if plr.pos == makevec2(12, 4):
+        plr.won = true
+
+    if plr.dead:
+        plr.canMove = false
         if deathTimer == 5:
             deathTimer = 0
             plr.dead = false
             plr.canMove = true
             plr.posSeq = @[]
-            plr = Player(pos : makevec2(0, 0), health : 2, fullhealth : 2)
+            plr = Player(npos : makevec2(0, 0), pos : makevec2(0, 0), health : 2, fullhealth : 2, lvl : 4, xp : 0)
+            plr.fullhealth = 2 + (plr.lvl - 4) div 2
+            plr.health = plr.fullhealth
             elocs = @[]
             medlocs = @[]
             map = genSeqSeq(8, 13, (GRND, NONE))
             (elocs, medlocs) = genOmap(50, 6, map)
-        deathTimer += 1
+        else: deathTimer += 1
 
     if plr.won:
         deathTimer = 0
         plr.canMove = false
         if winTimer == 7:
             plr.won = false
+            currentlv += 1
+            plr.dead = false
             plr.canMove = true
             winTimer = 0
             plr.posSeq = @[]
             elocs = @[]
             medlocs = @[]
-            map = genSeqSeq(8, 13, (GRND, NONE))
-            (elocs, medlocs) = genOmap(50, 6, map)
+            plr = Player(npos : makevec2(0, 0), pos : makevec2(0, 0), health : 2, fullhealth : 2, lvl : plr.lvl, xp : plr.xp)
+            plr.fullhealth = (plr.lvl - 4) div 2
+            plr.health = plr.fullhealth
+            if currentlv == 5:
+                map = genSeqSeq(8, 13, (GRND, NONE))
+                (elocs, medlocs) = genOmap(50, 6, map)
+            else:
+                map = genSeqSeq(8, 13, (GRND, NONE))
+                (elocs, medlocs) = genOmap(50, 6, map)
         else: winTimer += 1
 
 
-    lfkey = movePLr(plr, numTilesVec, lfkey)
+    if plr.canMove: lfkey = movePLr(plr, numTilesVec, lfkey)
     plrAnim plr
 
     BeginDrawing()
