@@ -161,6 +161,9 @@ var
     elocs, medlocs : seq[Vector2]
     trailTexTable = toTable {"0000" : LoadTexture "assets/sprites/trails/0000.png"}
     winTimer, deathTimer : int
+    estreak : int
+    lmestreak : int
+    plrpcache : seq[Vector2]
 
 for i in 0..12:
     var bini = $int2bin i
@@ -185,14 +188,20 @@ while not WindowShouldClose():
         echo plr.pos
         elocs.del elocs.find(plr.pos)
         plr.health += -1
-        echo plr.health
+        estreak += 1
+        plrpcache.add plr.pos
+        echo plr.health, " -> ", estreak
 
     if medlocs.len > 0 and plr.pos in medlocs:
         map[invert plr.pos] = (map[invert plr.pos][0], NONE)
         medlocs.del medlocs.find(plr.pos)
         plr.health += plr.fullhealth
-        echo plr.health
+        estreak += 1
+        plrpcache.add plr.pos
+        echo plr.health, " -> ", estreak
 
+    if plr.npos notin elocs and plr.npos notin medlocs and plr.pos notin plrpcache:
+        estreak = 0
 
     if (not plr.canMove) and plr.dead:
         if deathTimer == 5:
