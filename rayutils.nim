@@ -184,7 +184,7 @@ proc drawTexCentered*(tex : Texture, posx, posy : int | float | float32, tint : 
     tex.DrawTexture(int posx + tex.width div 2, int posy + tex.height div 2, tint)
 
 func reflect*(i, tp : int | float) : int | float = ## Flips value over tp
-    return tp - i + tp
+    return tp * 2 - i
 
 func abs*(v : Vector2) : Vector2 =
     return makevec2(abs v.x, abs v.y)
